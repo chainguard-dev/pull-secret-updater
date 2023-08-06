@@ -14,7 +14,7 @@ chainctl iam identities create <identity-name> \
 
 This will print an identity UID, which we'll use to configure the updater.
 
-Then, create a pull secret in the same namespace as the service account you want to use it with, and label it with the identity UID:
+Then, create an empty pull secret in the same namespace as the service account you want to use it with, and label it with the identity UID:
 
 ```yaml
 apiVersion: v1
@@ -24,10 +24,10 @@ metadata:
   labels:
     pull-secret-updater.chainguard.dev/identity: <identity UID>
 type: kubernetes.io/dockerconfigjson
-data:
+data: ''
 ```
 
-After creating the secret, the controller will update it to contain the short-lived token. The controller will update the token before it expires.
+After creating the empty secret, the controller will update it to contain the short-lived token. The controller will update the token before it expires.
 
 From here, you can use the pull token as described in official docs:
 
@@ -37,10 +37,10 @@ kind: Pod
 metadata:
   name: pull-secret-example
 spec:
-    containers:
+  containers:
     - name: pull-secret-example
       image: cgr.dev/<group>/<image>:<tag>
-    imagePullSecrets:
+  imagePullSecrets:
     - name: pull-secret
 ```
 
