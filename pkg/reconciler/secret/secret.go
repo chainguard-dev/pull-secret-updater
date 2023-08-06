@@ -44,7 +44,7 @@ const ( // TODO: configurable
 	ttl      = time.Hour
 	buffer   = 10 * time.Minute
 
-	labelKey = "chainguard.dev/identity"
+	labelKey = "pull-secret-updater.chainguard.dev/identity"
 )
 
 type Reconciler struct {
