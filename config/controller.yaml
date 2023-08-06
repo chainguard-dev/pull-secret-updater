@@ -16,9 +16,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: controller
-  namespace: knative-samples
-  labels:
-    samples.knative.dev/release: devel
+  namespace: pull-secret-updater
 spec:
   replicas: 1
   selector:
@@ -28,7 +26,6 @@ spec:
     metadata:
       labels:
         app: controller
-        samples.knative.dev/release: devel
     spec:
       # To avoid node becoming SPOF, spread our replicas to different nodes.
       affinity:
@@ -44,9 +41,7 @@ spec:
       serviceAccountName: controller
       containers:
       - name: controller
-        # This is the Go import path for the binary that is containerized
-        # and substituted here.
-        image: ko://knative.dev/sample-controller/cmd/controller
+        image: ko://github.com/imjasonh/pull-secret-updater/cmd/controller
         resources:
           requests:
             cpu: 100m
@@ -68,6 +63,9 @@ spec:
           value: config-observability
         - name: METRICS_DOMAIN
           value: knative.dev/samples
+        volumeMounts:
+        - name: oidc-info
+          mountPath: /var/run/chainguard/oidc/
 
         securityContext:
           allowPrivilegeEscalation: false
@@ -76,3 +74,12 @@ spec:
           capabilities:
             drop:
             - all
+
+      volumes:
+        - name: oidc-info
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: oidc-token
+                  expirationSeconds: 7200 # Use 2h to ensure our token is refreshed unless GKE is out of SLA.
+                  audience: pull-secret-updater

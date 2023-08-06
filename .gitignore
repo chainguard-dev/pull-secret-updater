@@ -6,6 +6,4 @@
 .vscode/
 *.iml
 
-# Temporary output of build tools
-bazel-*
-*.out
+controller

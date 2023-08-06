@@ -1,14 +1,28 @@
-# Knative Sample Controller
+# Pull Secret Updater
 
-[![GoDoc](https://godoc.org/knative.dev/sample-controller?status.svg)](https://godoc.org/knative.dev/sample-controller)
-[![Go Report Card](https://goreportcard.com/badge/knative/sample-controller)](https://goreportcard.com/report/knative/sample-controller)
+EXPERIMENTAL controller to keep a pull secret updated with a short-lived Chainguard pull token.
 
-Knative `sample-controller` defines a few simple resources that are validated by
-webhook and managed by a controller to demonstrate the canonical style in which
-Knative writes controllers.
+To use this, create a Chainguard [assumable identity](https://edu.chainguard.dev/chainguard/chainguard-enforce/iam-groups/assumable-ids/):
 
-To learn more about Knative, please visit our
-[Knative docs](https://github.com/knative/docs) repository.
+```
+chainctl iam identities create <identity-name> \
+    --identity-issuer=issuer.enforce.dev \
+    --issuer-keys=<keys for the issuer> \
+    --subject=<subject of the identity> \
+    --group=<group name> \
+    --role=registry.pull
+```
 
-If you are interested in contributing, see [CONTRIBUTING.md](./CONTRIBUTING.md)
-and [DEVELOPMENT.md](./DEVELOPMENT.md).
+This will print an identity UID, which we'll use to configure the updater.
+
+Then, create a pull secret in the same namespace as the service account you want to use it with, and label it with the identity UID:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pull-secret
+  labels:
+    pull-secret-updater.chainguard.dev/identity: <identity UID>
+type: kubernetes.io/dockerconfigjson
+```

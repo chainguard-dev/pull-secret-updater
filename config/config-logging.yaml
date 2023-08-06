@@ -16,7 +16,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: config-logging
-  namespace: knative-samples
+  namespace: pull-secret-updater
   labels:
     samples.knative.dev/release: devel
 
