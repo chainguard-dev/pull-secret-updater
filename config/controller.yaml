@@ -61,8 +61,6 @@ spec:
           value: config-logging
         - name: CONFIG_OBSERVABILITY_NAME
           value: config-observability
-        - name: METRICS_DOMAIN
-          value: knative.dev/samples
         volumeMounts:
         - name: oidc-info
           mountPath: /var/run/chainguard/oidc/

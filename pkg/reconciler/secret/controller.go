@@ -19,6 +19,7 @@ package secret
 import (
 	"context"
 
+	"github.com/imjasonh/pull-secret-updater/pkg/config"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
@@ -26,8 +27,11 @@ import (
 	secretreconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/secret"
 )
 
-func NewController(ctx context.Context, _ configmap.Watcher) *controller.Impl {
+func NewController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	r := &Reconciler{}
+
+	config.NewStore(ctx).WatchConfigs(cmw) // watch for config changes.
+
 	impl := secretreconciler.NewImpl(ctx, r)
 	r.enqueueAfter = impl.EnqueueAfter
 	secretinformer.Get(ctx).Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))

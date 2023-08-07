@@ -17,8 +17,6 @@ kind: ConfigMap
 metadata:
   name: config-observability
   namespace: pull-secret-updater
-  labels:
-    samples.knative.dev/release: devel
 
 data:
   _example: |
