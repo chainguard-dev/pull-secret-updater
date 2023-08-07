@@ -2,21 +2,20 @@
 
 EXPERIMENTAL controller to keep a pull secret updated with a short-lived Chainguard pull token.
 
-To use this, create a Chainguard [assumable identity](https://edu.chainguard.dev/chainguard/chainguard-enforce/iam-groups/assumable-ids/):
+To use this, create a Chainguard [assumable identity](https://edu.chainguard.dev/chainguard/chainguard-enforce/iam-groups/assumable-ids/) with permission to pull from the registry:
 
 ```sh
 chainctl iam identities create <identity-name> \
-    --identity-issuer-pattern=".*" \
+    --identity-issuer-pattern="[SEE BELOW]" \
     --subject-pattern="system:serviceaccount:pull-secret-updater:controller" \
-    --audience="https://kubernetes.default.svc" \
+    --audience="pull-secret-updater" \
     --group=<group> \
     --role=registry.pull
 ```
 
-**TODO:** to use KinD, you must also pass `--issuer-keys`.
-
 - On GKE, the issuer is `https://container.googleapis.com/v1/projects/<project>/locations/<location>/clusters/<cluster-name>`
 - On EKS, the issuer is `https://oidc.eks.<az>.amazonaws.com/id/<cluster-id>`
+- On KinD, the issuer is `https://kubernetes.default.svc.cluster.local`, but you need to do [other stuff](https://banzaicloud.com/blog/kubernetes-oidc/) to get the issuer keys and pass them to `--issuer-keys`.
 
 This command will print the identity's UID, which we'll use to configure the updater.
 
