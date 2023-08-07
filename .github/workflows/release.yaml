@@ -21,7 +21,9 @@ jobs:
       - run: go test ./...
 
       - uses: ko-build/setup-ko@v0.6
-      - run: ko resolve -f ./config/ > ./release.yaml
+      - env:
+          KO_DOCKER_REPO: ghcr.io/imjasonh/pull-secret-updater/controller
+        run: ko resolve -f ./config/ > ./release.yaml
 
       - uses: softprops/action-gh-release@v1
         with:
