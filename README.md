@@ -11,7 +11,6 @@ chainctl iam identities create kind-pull-secrets \
     --issuer-keys="$(kubectl get --raw /openid/v1/jwks)" \
     --identity-issuer=https://kubernetes.default.svc.cluster.local \
     --subject=system:serviceaccount:pull-secret-updater:controller \
-    --group=<group-UID> \
     --role=registry.pull
 ```
 
@@ -21,7 +20,6 @@ For a GKE cluster:
 chainctl iam identities create gke-pull-secrets \
     --identity-issuer="https://container.googleapis.com/v1/projects/<project>/locations/<location>/clusters/<cluster-name>" \
     --subject-pattern="system:serviceaccount:pull-secret-updater:controller" \
-    --group=<group-UID> \
     --role=registry.pull
 ```
 
@@ -45,17 +43,20 @@ kubectl get secret pull-secret -oyaml
 
 Now you can use the pull secret to authorize pulls from cgr.dev, as described in official docs:
 
-```yaml
+```sh
+kubectl create -f - <<EOF
 apiVersion: v1
 kind: Pod
 metadata:
-  name: pull-secret-example
+  generateName: pull-secret-example-
 spec:
   containers:
     - name: pull-secret-example
-      image: cgr.dev/<group>/<repo>:<tag>
+      image: cgr.dev/chainguard/busybox:latest-glibc
+      command: ['sleep', 'Infinity']
   imagePullSecrets:
     - name: pull-secret
+EOF
 ```
 
 As configured by default, the controller has permission to update Secrets named `pull-secret` in every namespace.

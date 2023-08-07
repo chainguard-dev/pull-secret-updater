@@ -8,7 +8,6 @@ package secret
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -76,7 +75,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *corev1.Secret) reconc
 	registry := config.FromContext(ctx).Audience
 	cfg := dockerConfig{
 		Auths: map[string]dockerConfigAuth{
-			registry: {Auth: []byte(base64.StdEncoding.EncodeToString([]byte("_token:" + token)))},
+			registry: {Auth: []byte("_token:" + token)},
 		},
 	}
 	raw, err := json.Marshal(cfg)
