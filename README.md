@@ -7,12 +7,16 @@ To use this, create a Chainguard [assumable identity](https://edu.chainguard.dev
 ```sh
 chainctl iam identities create <identity-name> \
     --identity-issuer-pattern=".*" \
-    --subject-pattern=".*" \
-    --group=<group name> \
+    --subject-pattern="system:serviceaccount:pull-secret-updater:controller" \
+    --audience="https://kubernetes.default.svc" \
+    --group=<group> \
     --role=registry.pull
 ```
 
 **TODO:** to use KinD, you must also pass `--issuer-keys`.
+
+- On GKE, the issuer is `https://container.googleapis.com/v1/projects/<project>/locations/<location>/clusters/<cluster-name>`
+- On EKS, the issuer is `https://oidc.eks.<az>.amazonaws.com/id/<cluster-id>`
 
 This command will print the identity's UID, which we'll use to configure the updater.
 
@@ -20,7 +24,7 @@ Create an empty pull secret in the same namespace as the service account you wan
 
 ```sh
 kubectl create secret generic pull-secret --type=kubernetes.io/dockerconfigjson --from-literal=.dockerconfigjson='{}'
-kubectl annotate secret pull-secret pull-secret-updater.chainguard.dev/identity=<identity UID>
+kubectl annotate secret pull-secret pull-secret-updater.chainguard.dev/identity=<identity-UID>
 ```
 
 After creating the empty secret, the controller will update it to contain the short-lived token.
@@ -30,7 +34,7 @@ The controller will update the token before it expires.
 kubectl get secret pull-secret -oyaml
 ```
 
-From here, you can use the pull secret as described in official docs:
+Now you can use the pull secret to authorize pulls from cgr.dev, as described in official docs:
 
 ```yaml
 apiVersion: v1
@@ -40,12 +44,12 @@ metadata:
 spec:
   containers:
     - name: pull-secret-example
-      image: cgr.dev/<group>/<image>:<tag>
+      image: cgr.dev/<group>/<repo>:<tag>
   imagePullSecrets:
     - name: pull-secret
 ```
 
-By default, the controller has access to Secrets named `pull-secret` in every namespace.
+As configured by default, the controller has permission to update Secrets named `pull-secret` in every namespace.
 To use a different name, you must grant `update` access to the controller's service account.
 
 ## Motivation
@@ -54,10 +58,11 @@ With traditional registries, to pull an image from a Kubernetes cluster you must
 
 This means anyone with access to the secret can extract the credential and use it to pull images from the registry, without detection or expiration.
 
-Ideally, the token would be short-lived and be automatically refreshed, like you get when you use `chainctl auth configure-docker`, but this is not possible with traditional registry credentials.
+Ideally, the token would be short-lived and be automatically refreshed, like you get when you credential helpers like `chainctl auth configure-docker`, but this is not possible with traditional registry credentials on Kubernetes.
 
-This controller keeps pull secrets updated with short-lived tokens, so the token can be short-lived and auto-updated.
+This controller keeps pull secrets updated with short-lived tokens, meaning that if the token is extracted from the secret, it's only useful for a short time.
+The controller updates the token automatically before it expires.
 
-The token used by this controller is tied to the cluster, so only this controller running on this cluster can request new tokens for the identity.
+The token used by this controller can be tied to the cluster, so only _this_ controller running on _this_ cluster can request new tokens for the identity.
 
-If the token is extracted from the pull secret, it can only be used to pull images for a short time before it expires.
+You can also use [Registry pull events](https://edu.chainguard.dev/chainguard/chainguard-enforce/reference/events/#service-registry---pull) to further monitor image pulls for potential abuse.
