@@ -8,7 +8,7 @@ package main
 import (
 	"knative.dev/pkg/injection/sharedmain"
 
-	"github.com/imjasonh/pull-secret-updater/pkg/reconciler/secret"
+	"github.com/chainguard-dev/pull-secret-updater/pkg/reconciler/secret"
 )
 
 func main() {

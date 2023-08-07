@@ -30,7 +30,7 @@ spec:
       serviceAccountName: controller
       containers:
       - name: controller
-        image: ko://github.com/imjasonh/pull-secret-updater/cmd/controller
+        image: ko://github.com/chainguard-dev/pull-secret-updater/cmd/controller
         resources:
           requests:
             cpu: 100m

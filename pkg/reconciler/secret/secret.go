@@ -24,7 +24,7 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 
-	"github.com/imjasonh/pull-secret-updater/pkg/config"
+	"github.com/chainguard-dev/pull-secret-updater/pkg/config"
 )
 
 const (

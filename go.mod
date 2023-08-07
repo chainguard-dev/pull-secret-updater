@@ -1,4 +1,4 @@
-module github.com/imjasonh/pull-secret-updater
+module github.com/chainguard-dev/pull-secret-updater
 
 go 1.20
 

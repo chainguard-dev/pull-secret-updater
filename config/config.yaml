@@ -9,5 +9,5 @@ metadata:
 
 data:
   audience: cgr.dev
-  issuer: issuer.enforce.dev
+  issuer: issuer.enforce.dev  # If you change this, you also need to change the SA token audience in controller.yaml
   buffer: 10m

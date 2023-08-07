@@ -14,7 +14,7 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	"github.com/imjasonh/pull-secret-updater/pkg/config"
+	"github.com/chainguard-dev/pull-secret-updater/pkg/config"
 )
 
 func NewController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
