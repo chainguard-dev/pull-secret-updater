@@ -8,7 +8,6 @@ To use this, you must first create an [assumable identity](https://edu.chainguar
 chainctl iam identities create <identity-name> \
     --identity-issuer-pattern="[SEE BELOW]" \
     --subject-pattern="system:serviceaccount:pull-secret-updater:controller" \
-    --audience="pull-secret-updater" \
     --group=<group-UID> \
     --role=registry.pull
 ```

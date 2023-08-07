@@ -2,7 +2,6 @@
 Copyright 2023 Chainguard, Inc.
 SPDX-License-Identifier: Apache-2.0
 */
-
 package config
 
 import (
@@ -20,17 +19,18 @@ type Store struct {
 
 // NewStore creates a new store of Configs and optionally calls functions when ConfigMaps are updated.
 func NewStore(ctx context.Context) *Store {
-	store := &Store{
+	return &Store{
 		UntypedStore: configmap.NewUntypedStore(
 			"config",
 			logging.FromContext(ctx).Named("config-store"),
 			configmap.Constructors{
 				"config": newConfigFromConfigMap,
 			},
+			func(n string, i interface{}) {
+				logging.FromContext(ctx).Infof("configmap %s updated: %+v", n, i)
+			},
 		),
 	}
-
-	return store
 }
 
 type Config struct {
@@ -82,6 +82,11 @@ func FromContext(ctx context.Context) *Config {
 	} else {
 		return c.(*Config)
 	}
+}
+
+// ToContext attaches the current Config state to the provided context.
+func (s *Store) ToContext(ctx context.Context) context.Context {
+	return ToContext(ctx, s.Load())
 }
 
 // Load creates a Config from the current config state of the Store.

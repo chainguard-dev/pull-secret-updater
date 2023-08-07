@@ -11,7 +11,3 @@ data:
   audience: cgr.dev
   issuer: issuer.enforce.dev
   buffer: 10m
-  repos: |
-    {
-      "<group-id>": "<identity-id>"
-    }

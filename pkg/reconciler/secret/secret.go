@@ -19,6 +19,8 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 
@@ -31,6 +33,8 @@ const (
 )
 
 type Reconciler struct {
+	client typedcorev1.CoreV1Interface
+
 	enqueueAfter func(obj interface{}, after time.Duration)
 }
 
@@ -65,7 +69,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *corev1.Secret) reconc
 	// Get a new token.
 	token, err := newToken(ctx, s.Annotations[annotationKey])
 	if err != nil {
-		logger.Errorf("Failed to get new token: %w", err)
+		logger.Errorf("Failed to get new token: %v", err)
 		return err
 	}
 
@@ -83,8 +87,16 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *corev1.Secret) reconc
 	s.Data[".dockerconfigjson"] = raw
 	s.Type = "kubernetes.io/dockerconfigjson"
 
+	// Update the secret. The knative/pkg reconciler will only update status, so
+	// we need to do this ourselves.
+	if _, err := r.client.Secrets(s.Namespace).Update(ctx, s, metav1.UpdateOptions{}); err != nil {
+		logger.Errorf("Failed to update secret: %v", err)
+		return err
+	}
+
 	// Check again before the token will expire.
 	buffer := config.FromContext(ctx).Buffer
+	logger.Infof("Updated secret, will check again in %s", ttl-buffer)
 	r.enqueueAfter(s, ttl-buffer)
 	return nil
 }
@@ -98,13 +110,8 @@ func checkToken(ctx context.Context, s *corev1.Secret) (updateIn time.Duration) 
 		logger.Errorf("Missing .dockerconfigjson")
 		return 0
 	}
-	b, err := base64.StdEncoding.DecodeString(string(raw))
-	if err != nil {
-		logger.Errorf("Failed to decode .dockerconfigjson: %v", err)
-		return 0
-	}
 	var cfg dockerConfig
-	if err := json.Unmarshal(b, &cfg); err != nil {
+	if err := json.Unmarshal(raw, &cfg); err != nil {
 		logger.Errorf("Failed to unmarshal .dockerconfigjson: %v", err)
 		return 0
 	}
@@ -156,7 +163,7 @@ func newToken(ctx context.Context, identity string) (string, error) {
 		RawQuery: url.Values{
 			"aud":      {registry},
 			"identity": {identity},
-			"scope":    {"registry.pull"},
+			// TODO: only request the capabilities we need.
 		}.Encode(),
 	}
 	logger.Infof("POST %s", u.String())

@@ -69,4 +69,4 @@ spec:
               - serviceAccountToken:
                   path: oidc-token
                   expirationSeconds: 7200 # Use 2h to ensure our token is refreshed unless GKE is out of SLA.
-                  audience: pull-secret-updater
+                  audience: issuer.enforce.dev
