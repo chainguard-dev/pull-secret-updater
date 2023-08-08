@@ -13,13 +13,9 @@ import (
 	secretreconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/secret"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-
-	"github.com/chainguard-dev/pull-secret-updater/pkg/config"
 )
 
 func NewController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
-	config.NewStore(ctx).WatchConfigs(cmw) // watch for config changes.
-
 	r := &Reconciler{
 		client: kubeclient.Get(ctx).CoreV1(),
 	}

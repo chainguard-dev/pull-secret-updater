@@ -22,8 +22,13 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
+)
 
-	"github.com/chainguard-dev/pull-secret-updater/pkg/config"
+// Exported vars for testing.
+var (
+	Issuer   = "issuer.enforce.dev"
+	Buffer   = 10 * time.Minute
+	Registry = "cgr.dev"
 )
 
 const (
@@ -48,7 +53,6 @@ type dockerConfigAuth struct {
 func (r *Reconciler) ReconcileKind(ctx context.Context, s *corev1.Secret) reconciler.Event {
 	logger := logging.FromContext(ctx).
 		With("namespace", s.Namespace, "name", s.Name)
-	logger.Infof("Reconciling: %+v", config.FromContext(ctx))
 
 	if s.Annotations == nil || s.Annotations[annotationKey] == "" {
 		logger.Debugw("Skipping", "reason", "missing identity label")
@@ -72,10 +76,9 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *corev1.Secret) reconc
 		return err
 	}
 
-	registry := config.FromContext(ctx).Audience
 	cfg := dockerConfig{
 		Auths: map[string]dockerConfigAuth{
-			registry: {Auth: []byte("_token:" + token)},
+			Registry: {Auth: []byte("_token:" + token)},
 		},
 	}
 	raw, err := json.Marshal(cfg)
@@ -94,15 +97,13 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *corev1.Secret) reconc
 	}
 
 	// Check again before the token will expire.
-	buffer := config.FromContext(ctx).Buffer
-	logger.Infof("Updated secret, will check again in %s", ttl-buffer)
-	r.enqueueAfter(s, ttl-buffer)
+	logger.Infof("Updated secret, will check again in %s", ttl-Buffer)
+	r.enqueueAfter(s, ttl-Buffer)
 	return nil
 }
 
 func checkToken(ctx context.Context, s *corev1.Secret) (updateIn time.Duration) {
 	logger := logging.FromContext(ctx)
-	registry := config.FromContext(ctx).Audience
 
 	raw := s.Data[".dockerconfigjson"]
 	if len(raw) == 0 {
@@ -114,7 +115,7 @@ func checkToken(ctx context.Context, s *corev1.Secret) (updateIn time.Duration) 
 		logger.Errorf("Failed to unmarshal .dockerconfigjson: %v", err)
 		return 0
 	}
-	current := cfg.Auths[registry].Auth
+	current := cfg.Auths[Registry].Auth
 	if len(current) == 0 {
 		logger.Errorf("Missing current token")
 		return 0
@@ -131,24 +132,21 @@ func checkToken(ctx context.Context, s *corev1.Secret) (updateIn time.Duration) 
 	}
 
 	// Construct a verifier that only accepts tokens from our issuer.
-	provider, err := oidc.NewProvider(ctx, config.FromContext(ctx).Issuer)
+	provider, err := oidc.NewProvider(ctx, Issuer)
 	if err != nil {
 		logger.Errorf("Failed to construct OIDC provider: %v", err)
 		return 0
 	}
-	tok, err := provider.VerifierContext(ctx, &oidc.Config{ClientID: registry}).Verify(ctx, string(pass))
+	tok, err := provider.VerifierContext(ctx, &oidc.Config{ClientID: Registry}).Verify(ctx, string(pass))
 	if err != nil {
 		logger.Errorf("Failed to verify token: %v", err)
 		return 0
 	}
-	buffer := config.FromContext(ctx).Buffer
-	return time.Until(tok.Expiry) - buffer
+	return time.Until(tok.Expiry) - Buffer
 }
 
 func newToken(ctx context.Context, identity string) (string, error) {
 	logger := logging.FromContext(ctx)
-	registry := config.FromContext(ctx).Audience
-	issuer := config.FromContext(ctx).Issuer
 
 	// Get the controller's SA token.
 	saToken, err := os.ReadFile("/var/run/chainguard/oidc/oidc-token")
@@ -157,10 +155,10 @@ func newToken(ctx context.Context, identity string) (string, error) {
 	}
 	u := url.URL{
 		Scheme: "https",
-		Host:   issuer,
+		Host:   Issuer,
 		Path:   "/sts/exchange",
 		RawQuery: url.Values{
-			"aud":      {registry},
+			"aud":      {Registry},
 			"identity": {identity},
 			// TODO: only request the capabilities we need.
 		}.Encode(),
